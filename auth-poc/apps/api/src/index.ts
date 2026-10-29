@@ -1,4 +1,5 @@
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import { AuthenticationV1Api, KubeConfig, Observable } from "@kubernetes/client-node";
 import { createRemoteJWKSet } from "jose";
 import { createAuthenticate, workloadAudience } from "./auth.js";
@@ -41,6 +42,7 @@ const authenticate = createAuthenticate({
 
 const app = express();
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+app.use(rateLimit({ windowMs: 60000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false }));
 app.get("/whoami", authenticate, (req, res) => res.json(req.principal));
 app.get("/data", authenticate, (_req, res) =>
   res.json([

@@ -14,7 +14,8 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: entra-local
-          image: ghcr.io/cmaneu/entra-local:latest
+          image: ghcr.io/cmaneu/entra-local:0.1.1
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8443
           env:
