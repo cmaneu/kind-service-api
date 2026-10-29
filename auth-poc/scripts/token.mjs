@@ -9,7 +9,7 @@ export async function getUserToken(variant = "valid") {
   }
   if (variant !== "valid") {
     const generated = await entra(`/admin/api/apps/${apiApp}/token-generate`, {
-      userId: "aaaaaaaa-0000-0000-000000000002",
+      userId: "bob@entralocal.dev",
       tokenType: variant === "idToken" ? "idToken" : "accessToken",
       tokenVariant: ["idToken", "unscoped"].includes(variant) ? "valid" : variant,
     });
