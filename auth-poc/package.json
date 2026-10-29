@@ -1,0 +1,20 @@
+{
+  "name": "identity-poc",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.9",
+  "engines": { "node": ">=22.12.0" },
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "vitest run",
+    "up": "node scripts/up.mjs",
+    "down": "node scripts/down.mjs",
+    "token": "node scripts/token.mjs",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  }
+}
