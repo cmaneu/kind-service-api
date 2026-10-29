@@ -1,0 +1,12 @@
+FROM node:24-bookworm-slim
+RUN corepack enable
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/worker/package.json apps/worker/package.json
+RUN pnpm install --frozen-lockfile
+COPY apps/api apps/api
+RUN pnpm --filter @identity-poc/api build
+USER 1000:1000
+EXPOSE 3000
+CMD ["node", "apps/api/dist/index.js"]
