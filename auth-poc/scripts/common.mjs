@@ -11,7 +11,7 @@ export const tenant = "11111111-1111-1111-1111-111111111111";
 export const apiApp = "cccccccc-0000-0000-0000-000000000007";
 export const audience = "urn:identity-poc:api";
 export const issuer = `https://localhost:8443/${tenant}/v2.0`;
-export const entraImage = "ghcr.io/cmaneu/entra-local:latest";
+export const entraImage = "ghcr.io/cmaneu/entra-local:0.1.1";
 
 export function run(command, args, capture = false) {
   return execFileSync(command, args, {

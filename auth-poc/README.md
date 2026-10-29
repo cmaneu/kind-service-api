@@ -204,7 +204,9 @@ bearer tokens in production**, including worker-to-API traffic. Tokens must not
 be logged, committed, or shared. The emulator's certificate and local kubeconfig
 are development artifacts, not production trust infrastructure.
 
-This POC omits rate limiting, production authorization policies, resource
+The API uses a basic per-IP in-memory limit of 120 requests/minute to bound
+authentication requests; `/health` is exempt. It is not a distributed limiter.
+This POC omits production authorization policies, resource
 isolation/network policies, high availability, and production credential
 management. The API has a cluster-scoped TokenReview permission (only `create`
 on `tokenreviews`); guard that identity in real deployments. A slow/unavailable

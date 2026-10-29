@@ -2,6 +2,7 @@ import { createServer, type Server } from "node:http";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import {
   createRemoteJWKSet,
   exportJWK,
@@ -57,6 +58,7 @@ beforeAll(async () => {
     res.end(JSON.stringify({ keys: [publicKey] }));
   }));
   const app = express();
+  app.use(rateLimit({ windowMs: 60000, limit: 1000 }));
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
   const authenticate = createAuthenticate({
     issuer,
@@ -87,6 +89,14 @@ describe("shared authentication middleware", () => {
     expect(review).not.toHaveBeenCalled();
   });
 
+  it("rejects malformed authorization schemes and extra credentials", async () => {
+    const token = await userToken();
+    for (const authorization of ["Basic", "Bearer", ["Bearer", token, "extra"].join(" ")]) {
+      expect((await fetch(`${base}/whoami`, { headers: { authorization } })).status).toBe(401);
+    }
+    expect(review).not.toHaveBeenCalled();
+  });
+
   it("verifies a signed delegated user token using JWKS", async () => {
     const token = await userToken();
     const response = await request(token);
@@ -100,6 +110,7 @@ describe("shared authentication middleware", () => {
 
   it.each([
     ["expired", { exp: 1 }],
+    ["not yet valid", { nbf: Math.floor(Date.now() / 1000) + 3600 }],
     ["missing expiration", { exp: undefined }],
     ["wrong audience", { aud: "another-api" }],
     ["ID token without delegated scope", { scp: undefined }],
