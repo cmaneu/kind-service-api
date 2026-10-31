@@ -1,0 +1,77 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../k8s
+images:
+  - name: identity-poc-api
+    newTag: windows
+  - name: identity-poc-worker
+    newTag: windows
+patches:
+  - target:
+      kind: Deployment
+      name: api|reporting-worker
+    patch: |-
+      - op: add
+        path: /spec/template/spec/os
+        value: { name: windows }
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value:
+          kubernetes.io/os: windows
+          node.kubernetes.io/windows-build: "10.0.26100"
+      - op: add
+        path: /spec/template/spec/tolerations
+        value:
+          - key: os
+            operator: Equal
+            value: windows
+            effect: NoSchedule
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent
+      - op: replace
+        path: /spec/template/spec/containers/0/securityContext
+        value:
+          windowsOptions:
+            runAsUserName: ContainerUser
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: { cpu: 100m, memory: 256Mi }
+          limits: { memory: 1Gi }
+  - target:
+      kind: Deployment
+      name: api
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/3/value
+        value: C:/etc/entra/ca.pem
+      - op: replace
+        path: /spec/template/spec/containers/0/volumeMounts/0/mountPath
+        value: C:/etc/entra
+  - target:
+      kind: Deployment
+      name: reporting-worker
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: { name: TOKEN_FILE, value: "C:/var/run/api-token/token" }
+      - op: replace
+        path: /spec/template/spec/containers/0/volumeMounts/0/mountPath
+        value: C:/var/run/api-token
+  - target:
+      kind: Deployment
+      name: entra-local
+    patch: |-
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value: { kubernetes.io/os: linux }
+  - target:
+      kind: Service
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: ClusterIP
+      - op: remove
+        path: /spec/ports/0/nodePort

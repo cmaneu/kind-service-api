@@ -1,0 +1,30 @@
+# escape=`
+FROM mcr.microsoft.com/windows/servercore:ltsc2025 AS build
+SHELL ["powershell", "-NoLogo", "-NoProfile", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+ARG NODE_VERSION=24.22.2
+RUN $archive = \"node-v$env:NODE_VERSION-win-x64.zip\"; `
+    $base = \"https://nodejs.org/dist/v$env:NODE_VERSION\"; `
+    Invoke-WebRequest \"$base/$archive\" -OutFile C:\node.zip -UseBasicParsing; `
+    $sums = (Invoke-WebRequest \"$base/SHASUMS256.txt\" -UseBasicParsing).Content; `
+    $expected = (($sums -split \"`n\" | Where-Object { $_.Trim().EndsWith(\"  $archive\") }) -split '\s+')[0]; `
+    if (!$expected -or (Get-FileHash C:\node.zip -Algorithm SHA256).Hash -ne $expected) { throw 'Node archive checksum mismatch' }; `
+    Expand-Archive C:\node.zip C:\; `
+    Move-Item \"C:\node-v$env:NODE_VERSION-win-x64\" C:\node; `
+    Remove-Item C:\node.zip
+ENV PATH="C:\node;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0"
+WORKDIR C:/app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/worker/package.json apps/worker/package.json
+RUN corepack.cmd enable; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; `
+    pnpm.cmd install --frozen-lockfile; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+COPY apps apps
+RUN pnpm.cmd build; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+USER ContainerUser
+
+FROM build AS api
+EXPOSE 3000
+CMD ["node", "apps/api/dist/index.js"]
+
+FROM build AS worker
+CMD ["node", "apps/worker/dist/index.js"]

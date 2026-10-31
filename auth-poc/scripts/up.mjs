@@ -1,8 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { X509Certificate } from "node:crypto";
-import { cluster, entraImage, kube, local, run, waitFor } from "./common.mjs";
+import { cluster, entraImage, kube, local, run, target, waitFor } from "./common.mjs";
 
+if (target !== "kind") throw new Error("Use scripts/azure-up.ps1 for Azure");
 mkdirSync(local, { recursive: true });
 run("docker", ["info"], true);
 const clusters = run("kind", ["get", "clusters"], true).trim().split(/\r?\n/);

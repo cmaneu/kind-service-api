@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { audience, cluster, entra, issuer, kube, tenant } from "./common.mjs";
+import { audience, cluster, entra, issuer, kube, target, tenant } from "./common.mjs";
 import { getUserToken } from "./token.mjs";
 
 const api = "http://127.0.0.1:3000";
@@ -26,6 +26,19 @@ async function check(label, token, status, type) {
   console.log(`PASS ${label}: ${status}`);
 }
 
+if (target === "azure") {
+  for (const app of ["api", "reporting-worker"]) {
+    const pods = JSON.parse(kube(["get", "pods", "-n", cluster, "-l", `app=${app}`, "-o", "json"], true));
+    assert.ok(pods.items.length > 0, `${app} must have a running Pod`);
+    for (const pod of pods.items) {
+      const node = JSON.parse(kube(["get", "node", pod.spec.nodeName, "-o", "json"], true));
+      assert.equal(node.status.nodeInfo.operatingSystem, "windows", `${app} must run on Windows`);
+    }
+    assert.equal(kube(["exec", "-n", cluster, `deployment/${app}`, "--",
+      "node", "-p", "process.platform"], true).trim(), "win32");
+  }
+  console.log("PASS API and worker run on Windows");
+}
 const discovery = await entra(`/${tenant}/v2.0/.well-known/openid-configuration`);
 assert.equal(discovery.issuer, issuer);
 assert.equal((await fetch(`${api}/health`)).status, 200);
@@ -33,7 +46,7 @@ await check("no token", undefined, 401);
 await check("Entra delegated user", await getUserToken(), 200, "user");
 // Read the actual projected token, not a locally fabricated workload credential.
 const workerToken = kube(["exec", "-n", cluster, "deployment/reporting-worker", "--",
-  "node", "-e", 'process.stdout.write(require("node:fs").readFileSync("/var/run/api-token/token","utf8"))'], true).trim();
+  "node", "-e", 'process.stdout.write(require("node:fs").readFileSync(process.env.TOKEN_FILE || "/var/run/api-token/token","utf8"))'], true).trim();
 await check("projected worker token", workerToken, 200, "service");
 function serviceToken(account, requestedAudience) {
   return kube(["create", "token", account, "-n", cluster,
