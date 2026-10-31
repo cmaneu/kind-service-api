@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
 export const root = fileURLToPath(new URL("../", import.meta.url));
-export const local = resolve(root, ".local");
+export const target = process.env.IDENTITY_POC_TARGET ?? "kind";
+if (!["kind", "azure"].includes(target)) throw new Error("IDENTITY_POC_TARGET must be kind or azure");
+export const local = resolve(root, target === "azure" ? ".azure" : ".local");
 export const cluster = "identity-poc";
 export const tenant = "11111111-1111-1111-1111-111111111111";
 export const apiApp = "cccccccc-0000-0000-0000-000000000007";
@@ -25,7 +27,7 @@ export function run(command, args, capture = false) {
 export function kube(args, capture = false) {
   return run("kubectl", [
     "--kubeconfig", resolve(local, "kubeconfig"),
-    "--context", `kind-${cluster}`, ...args,
+    "--context", target === "azure" ? "identity-poc-azure" : `kind-${cluster}`, ...args,
   ], capture);
 }
 
